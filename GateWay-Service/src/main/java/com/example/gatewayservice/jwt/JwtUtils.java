@@ -1,5 +1,7 @@
 package com.example.gatewayservice.jwt;
 
+import com.example.gatewayservice.exceptionhandle.ErrorCus;
+import com.example.gatewayservice.exceptionhandle.JwtTokenMalformedException;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -10,7 +12,7 @@ import java.util.function.Function;
 @Component
 @Slf4j
 public class JwtUtils {
-    private String jwtSecret="dhfksjdhsjdhfkjshgjksdhgksdgfhsdfghdfjfgjfgjhdfgjfhkfgjdgjfkgjlkfhjdfhg" +
+    private String jwtSecret = "dhfksjdhsjdhfkjshgjksdhgksdgfhsdfghdfjfgjfgjhdfgjfhkfgjdgjfkgjlkfhjdfhg" +
             "dfhfgkhfghdfhdfjkfgjdfghdfhfgkfgjfghfgfhfjfgjdfgdfhdfhfgjghkghkghjghkjghtyurtyeryturth";
     private int jwtExp = 600000;
 
@@ -27,29 +29,33 @@ public class JwtUtils {
         return getClaimsFromToken(token, Claims -> Claims.getSubject());
     }
 
-    private <T> T getClaimsFromToken(String token, Function<Claims, T> function) {
+    public <T> T getClaimsFromToken(String token, Function<Claims, T> function) {
         Claims claims = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
 
         return function.apply(claims);
     }
 
-    public boolean validateJwtToken(String authToken) {
+    public Claims getClaimsFromToken(String token) {
+        return Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
+    }
+
+    public boolean validateJwtToken(String authToken) throws JwtTokenMalformedException {
         try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(authToken);
-            return true;
+        Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(authToken);
+        return true;
         } catch (MalformedJwtException e) {
             log.error("Invalid JWT token: {}", e.getMessage());
-            return false;
+            throw new JwtTokenMalformedException(e.getMessage());
         } catch (ExpiredJwtException e) {
             log.error("JWT token is expired: {}", e.getMessage());
-            return false;
+            throw new JwtTokenMalformedException(e.getMessage());
         } catch (UnsupportedJwtException e) {
             log.error("JWT token is unsupported: {}", e.getMessage());
-            return false;
+            throw new JwtTokenMalformedException(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.error("JWT claims string is empty: {}", e.getMessage());
-            return false;
-        }
 
+        }
+        return false;
     }
 }
