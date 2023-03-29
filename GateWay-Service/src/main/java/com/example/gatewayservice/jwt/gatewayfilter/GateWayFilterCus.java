@@ -7,6 +7,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.DecodingException;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -52,8 +53,8 @@ public class GateWayFilterCus implements GatewayFilter {
             try {
                 jwtUtil.validateJwtToken(token);
             } catch (JwtTokenMalformedException | ExpiredJwtException | MalformedJwtException
-                     | UnsupportedJwtException | IllegalArgumentException | DecodingException
-                    e2 ) {
+                     | UnsupportedJwtException | IllegalArgumentException | DecodingException | SignatureException
+                    e2) {
                 // e.printStackTrace();
 
                 ServerHttpResponse response = exchange.getResponse();
@@ -70,6 +71,7 @@ public class GateWayFilterCus implements GatewayFilter {
 
         return chain.filter(exchange);
     }
+
     private String parseJwt(ServerWebExchange exchange) {
         ServerHttpRequest request = exchange.getRequest();
         String responseHeader = request.getHeaders().getOrEmpty("Authorization").get(0);
@@ -81,4 +83,8 @@ public class GateWayFilterCus implements GatewayFilter {
         return null;
         // test git merge : remote
     }
+
+
+    // test merge
 }
+

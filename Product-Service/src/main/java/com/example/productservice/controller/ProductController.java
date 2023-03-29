@@ -1,5 +1,6 @@
 package com.example.productservice.controller;
 
+import com.example.productservice.dto.ProductDTO;
 import com.example.productservice.entity.Product;
 import com.example.productservice.repo.ProductRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ public class ProductController {
 
     @Autowired
     private ProductRepo productRepo;
+
     @GetMapping("/")
     public ResponseEntity<List<Product>> getProductList() {
 
@@ -23,4 +25,10 @@ public class ProductController {
 
     }
 
+    @GetMapping("/dto")
+    public ResponseEntity<List<ProductDTO>> getProductDTOList() {
+
+        return ResponseEntity.ok(productRepo.getAll2());
+
+    }
 }

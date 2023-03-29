@@ -23,4 +23,11 @@ public class CartController {
 
         return products;
     }
+    @GetMapping("/dto")
+    public ResponseEntity<List> getProductDTOs() {
+
+        ResponseEntity<List> products = restTemplate.getForEntity("http://localhost:8080/product/dto", List.class);
+
+        return products;
+    }
 }
