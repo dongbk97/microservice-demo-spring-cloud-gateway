@@ -2,12 +2,15 @@ package com.example.gatewayservice.jwt.gatewayfilter;
 
 import com.example.gatewayservice.exceptionhandle.JwtTokenMalformedException;
 import com.example.gatewayservice.jwt.JwtUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -20,19 +23,21 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Predicate;
 
 @Component
+@Slf4j
 public class GateWayFilterCus implements GatewayFilter {
-
-
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private JwtUtils jwtUtil;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        ServerHttpRequest request = (ServerHttpRequest) exchange.getRequest();
+        ServerHttpRequest request = exchange.getRequest();
 
         final List<String> apiEndpoints = List.of("/register", "/login");
 
@@ -44,25 +49,30 @@ public class GateWayFilterCus implements GatewayFilter {
                 ServerHttpResponse response = exchange.getResponse();
                 response.setStatusCode(HttpStatus.UNAUTHORIZED);
 
-                return response.setComplete();
+                String message= "Missing Authorization header";
+                DataBuffer buffer = response.bufferFactory().wrap(message.getBytes());
+                return response.writeWith(Mono.just(buffer));
             }
-
             final String token = parseJwt(exchange);
-//                    request.getHeaders().getOrEmpty("Authorization").get(0);
-
             try {
                 jwtUtil.validateJwtToken(token);
             } catch (JwtTokenMalformedException | ExpiredJwtException | MalformedJwtException
                      | UnsupportedJwtException | IllegalArgumentException | DecodingException | SignatureException
                     e2) {
-                // e.printStackTrace();
 
                 ServerHttpResponse response = exchange.getResponse();
                 response.setStatusCode(HttpStatus.BAD_REQUEST);
-                String message = "{\"error\": \"" + e2.getMessage() + "\"}";
-                DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(message.getBytes());
-                response.writeWith(Mono.just(buffer)).then(Mono.empty());
-                return response.setComplete();
+
+                String message = e2.getMessage();
+                MessageError messageError = new MessageError(message, LocalDateTime.now());
+                byte[] bytes = new byte[0];
+                try {
+                    bytes = objectMapper.writeValueAsBytes(messageError);
+                } catch (JsonProcessingException e) {
+                    log.error("Error converting object to bytes: {}", e.getMessage());
+                }
+                DataBuffer buffer = response.bufferFactory().wrap(bytes);
+                return response.writeWith(Mono.just(buffer));
             }
 
             Claims claims = jwtUtil.getClaimsFromToken(token);
@@ -86,5 +96,16 @@ public class GateWayFilterCus implements GatewayFilter {
 
 
     // test merge
+    private static class MessageError {
+
+        private String message;
+        private LocalDateTime timemestap;
+
+        public MessageError(String message, LocalDateTime timemestap) {
+            this.message = message;
+            this.timemestap = timemestap;
+        }
+
+    }
 }
 
